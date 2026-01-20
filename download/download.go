@@ -10,46 +10,46 @@ import (
 	yfa "github.com/oscarli916/yahoo-finance-api"
 )
 
-func downloadTop500() {
-	fmt.Println("Downloading top500.csv...")
-	file, err := os.Open("top500.csv")
+func DownloadHistory(filename string, destination string) {
+	file, err := os.Open(filename)
 	if err != nil {
 		panic(err)
 	}
+
 	defer file.Close()
 
 	r := csv.NewReader(file)
 	r.Comma = ';'
 	tickers, _ := r.ReadAll()
 
-	err = os.MkdirAll(".data", os.ModePerm)
+	err = os.MkdirAll(destination, os.ModePerm)
 	if err != nil {
 		return
 	}
 
 	for _, line := range tickers {
-		ticker := line[1]
-		filename := ".data/" + ticker + ".json"
+		ticker := line[0]
+		filename := destination + "/" + ticker
 
 		if _, err := os.Stat(filename); err == nil {
-			fmt.Println(ticker, "bereits gespeichert, überspringe...")
+			fmt.Println(ticker, "downloaded, skip...")
 			continue
 		}
 
-		fmt.Println("Lade [", line[0], "]:", ticker, " with value of ", line[2])
+		fmt.Println("Load:", ticker)
 		t := yfa.NewTicker(ticker)
 		history, err := t.History(yfa.HistoryQuery{
 			Range:    "2y",
 			Interval: "1h",
 		})
 		if err != nil {
-			fmt.Println("Fehler bei", ticker, ":", err)
+			fmt.Println("Error on", ticker, ":", err)
 			continue
 		}
 
 		f, err := os.Create(filename)
 		if err != nil {
-			fmt.Println("Fehler beim Erstellen der Datei:", err)
+			fmt.Println("Error while creating the File:", err)
 			continue
 		}
 		enc := json.NewEncoder(f)

@@ -32,19 +32,24 @@ func Download(cfg *config.Config, args []string) error {
 	if *crypto || *stock || *etf {
 
 		if *stock {
-			load.FetchAndSave("most_actives", filepath.Join(resources, "stock.symbols"))
+			file := filepath.Join(resources, "stock.symbols")
+			destination := filepath.Join(resources, "stock")
+			load.FetchAndSave("most_actives", file)
+			load.DownloadHistory(file, destination)
 		}
 		if *etf {
-			load.FetchAndSave("most_actives_etfs", filepath.Join(resources, "etf.symbols"))
+			file := filepath.Join(resources, "etf.symbols")
+			destination := filepath.Join(resources, "etf")
+			load.FetchAndSave("most_actives_etfs", file)
+			load.DownloadHistory(file, destination)
 		}
 		if *crypto {
-			load.FetchAndSave("all_cryptocurrencies_us", filepath.Join(resources, "crypto.symbols"))
+			file := filepath.Join(resources, "crypto.symbols")
+			destination := filepath.Join(resources, "crypto")
+			load.FetchAndSave("all_cryptocurrencies_us", file)
+			load.DownloadHistory(file, destination)
 		}
 	}
-
-	// TODO: Rate-Limit / Retry-Handling
-	// TODO: Daten lokal speichern
-	// TODO: Fortschritt + Logs ausgeben
 
 	return nil
 }
