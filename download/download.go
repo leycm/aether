@@ -22,7 +22,10 @@ func downloadTop500() {
 	r.Comma = ';'
 	tickers, _ := r.ReadAll()
 
-	os.MkdirAll(".data", os.ModePerm)
+	err = os.MkdirAll(".data", os.ModePerm)
+	if err != nil {
+		return
+	}
 
 	for _, line := range tickers {
 		ticker := line[1]

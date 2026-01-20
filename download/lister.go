@@ -25,14 +25,8 @@ type Response struct {
 	} `json:"finance"`
 }
 
-func list() {
-	fetchAndSave("most_actives", "lists/stock_symbols.list")
-	fetchAndSave("most_actives_etfs", "lists/etf_symbols.list")
-	fetchAndSave("all_cryptocurrencies_us", "lists/crypto_symbols.list")
-}
-
-func fetchAndSave(scrId, filename string) {
-	fmt.Println("Starte:", scrId)
+func FetchAndSave(scrId, filename string) {
+	fmt.Println("start:", scrId)
 
 	file, err := os.Create(filename)
 	if err != nil {
@@ -72,7 +66,7 @@ func fetchAndSave(scrId, filename string) {
 
 		if len(data.Finance.Result) == 0 ||
 			len(data.Finance.Result[0].Quotes) == 0 {
-			fmt.Println("Fertig:", scrId)
+			fmt.Println("Finished:", scrId)
 			break
 		}
 
@@ -85,5 +79,5 @@ func fetchAndSave(scrId, filename string) {
 		time.Sleep(delay)
 	}
 
-	fmt.Printf("[%s] Gespeichert: %d Symbole -> %s\n\n", scrId, total, filename)
+	fmt.Printf("[%s] finished: %d Symbole -> %s\n\n", scrId, total, filename)
 }
