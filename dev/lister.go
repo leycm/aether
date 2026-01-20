@@ -1,4 +1,4 @@
-package main
+package dev
 
 import (
 	"encoding/json"
@@ -85,5 +85,5 @@ func fetchAndSave(scrId, filename string) {
 		time.Sleep(delay)
 	}
 
-	fmt.Printf("[%s] Gespeichert: %d Symbole → %s\n\n", scrId, total, filename)
+	fmt.Printf("[%s] Gespeichert: %d Symbole -> %s\n\n", scrId, total, filename)
 }
