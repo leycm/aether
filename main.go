@@ -5,21 +5,30 @@ import (
 	"os"
 
 	"aether/cli"
+	"aether/constants"
 )
 
 func main() {
-	cfg, args := cli.ParseGlobal(os.Args[1:])
+	cfg, args, err := cli.ParseGlobal(os.Args[1:])
+	if err != nil {
+		exitWithError(err, constants.ExitConfigError)
+	}
 
 	if len(args) == 0 {
-		cli.StartREPL(cfg)
+		if err := cli.StartREPL(cfg); err != nil {
+			exitWithError(err, constants.ExitError)
+		}
 		return
 	}
 
 	if err := cli.DispatchCommand(cfg, args); err != nil {
-		_, err := fmt.Fprintln(os.Stderr, err)
-		if err != nil {
-			return
-		}
-		os.Exit(1)
+		exitWithError(err, constants.ExitError)
 	}
+}
+
+func exitWithError(err error, code int) {
+	if err != nil {
+		_, _ = fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+	}
+	os.Exit(code)
 }

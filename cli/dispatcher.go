@@ -1,28 +1,37 @@
 package cli
 
 import (
-	"aether/config"
-	"errors"
-
 	"aether/commands"
+	"aether/config"
+	"aether/constants"
+	"fmt"
 )
 
+// DispatchCommand routes the command to the appropriate handler
 func DispatchCommand(cfg *config.Config, args []string) error {
 	if len(args) == 0 {
-		return errors.New("no commands")
+		return fmt.Errorf(constants.ErrNoCommands)
 	}
 
 	cmd := args[0]
 	cmdArgs := args[1:]
 
 	switch cmd {
-	case "train":
-		return commands.Train(cfg, cmdArgs)
-	case "download":
-		return commands.Download(cfg, cmdArgs)
-	case "predict":
-		return commands.Predict(cfg, cmdArgs)
+	case constants.CmdTrain:
+		if err := commands.Train(cfg, cmdArgs); err != nil {
+			return fmt.Errorf("train command failed: %w", err)
+		}
+	case constants.CmdDownload:
+		if err := commands.Download(cfg, cmdArgs); err != nil {
+			return fmt.Errorf("download command failed: %w", err)
+		}
+	case constants.CmdPredict:
+		if err := commands.Predict(cfg, cmdArgs); err != nil {
+			return fmt.Errorf("predict command failed: %w", err)
+		}
 	default:
-		return errors.New("unknown commands: " + cmd)
+		return fmt.Errorf(constants.ErrUnknownCommand, cmd)
 	}
+
+	return nil
 }

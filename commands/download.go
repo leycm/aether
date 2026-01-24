@@ -2,6 +2,7 @@ package commands
 
 import (
 	"aether/config"
+	"aether/constants"
 	load "aether/download"
 	"flag"
 	"fmt"
@@ -9,46 +10,82 @@ import (
 	"path/filepath"
 )
 
+// Download handles the download command for fetching market data
 func Download(cfg *config.Config, args []string) error {
 	fs := flag.NewFlagSet("download", flag.ContinueOnError)
-
-	crypto := fs.Bool("C", false, "download crypto data")
-	stock := fs.Bool("S", false, "download stock data")
-	etf := fs.Bool("E", false, "download etf data")
-
-	_ = fs.Parse(args)
-
-	fmt.Println("DOWNLOAD")
-	fmt.Println(" workspace:", cfg.Workspace)
-	fmt.Println(" crypto:", *crypto)
-	fmt.Println(" stock :", *stock)
-	fmt.Println(" etf   :", *etf)
-
-	resources := filepath.Join(cfg.Workspace, ".resources")
-	if err := os.MkdirAll(resources, os.ModePerm); err != nil {
-		return fmt.Errorf("fail to create resources folder: %w", err)
+	fs.Usage = func() {
+		fmt.Fprintf(
+			flag.CommandLine.Output(),
+			"Usage: %s [options]\nOptions:\n",
+			fs.Name(),
+		)
+		fs.PrintDefaults()
 	}
 
-	if *crypto || *stock || *etf {
+	// Define flags
+	crypto := fs.Bool(
+		"crypto",
+		false,
+		"download cryptocurrency market data",
+	)
+	stock := fs.Bool(
+		"stock",
+		false,
+		"download stock market data",
+	)
+	etf := fs.Bool(
+		"etf",
+		false,
+		"download ETF market data",
+	)
 
-		if *stock {
-			file := filepath.Join(resources, "stock.symbols")
-			destination := filepath.Join(resources, "stock")
-			load.FetchAndSave("most_actives", file)
-			load.DownloadHistory(file, destination)
+	// Parse flags
+	if err := fs.Parse(args); err != nil {
+		return fmt.Errorf("%w: %v", constants.ErrInvalidArgs, err)
+	}
+
+	// Validate at least one data type is selected
+	if !*crypto && !*stock && !*etf {
+		fs.Usage()
+		return fmt.Errorf("%w: no data type specified (use -crypto, -stock, or -etf)", constants.ErrInvalidArgs)
+	}
+
+	// Create resources directory
+	resources := filepath.Join(cfg.Workspace, ".resources")
+	if err := os.MkdirAll(resources, 0755); err != nil {
+		return fmt.Errorf("%w: failed to create resources directory: %v", constants.ErrFileOperation, err)
+	}
+
+	// Process downloads
+	downloads := []struct {
+		enabled bool
+		name    string
+		source  string
+	}{
+		{*stock, "stock", "most_actives"},
+		{*etf, "etf", "most_actives_etfs"},
+		{*crypto, "crypto", "all_cryptocurrencies_us"},
+	}
+
+	for _, d := range downloads {
+		if !d.enabled {
+			continue
 		}
-		if *etf {
-			file := filepath.Join(resources, "etf.symbols")
-			destination := filepath.Join(resources, "etf")
-			load.FetchAndSave("most_actives_etfs", file)
-			load.DownloadHistory(file, destination)
+
+		symbolsFile := filepath.Join(resources, d.name+".symbols")
+		destination := filepath.Join(resources, d.name)
+
+		fmt.Printf("Downloading %s symbols...\n", d.name)
+		if err := load.FetchAndSave(d.source, symbolsFile); err != nil {
+			return fmt.Errorf("failed to fetch %s symbols: %w", d.name, err)
 		}
-		if *crypto {
-			file := filepath.Join(resources, "crypto.symbols")
-			destination := filepath.Join(resources, "crypto")
-			load.FetchAndSave("all_cryptocurrencies_us", file)
-			load.DownloadHistory(file, destination)
+
+		fmt.Printf("Downloading %s history...\n", d.name)
+		if err := load.DownloadHistory(symbolsFile, destination); err != nil {
+			return fmt.Errorf("failed to download %s history: %w", d.name, err)
 		}
+
+		fmt.Printf("Successfully downloaded %s data\n", d.name)
 	}
 
 	return nil

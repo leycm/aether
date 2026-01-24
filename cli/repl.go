@@ -1,7 +1,7 @@
 package cli
 
 import (
-	"errors"
+	"aether/constants"
 	"fmt"
 	"strings"
 
@@ -10,50 +10,72 @@ import (
 	"github.com/chzyer/readline"
 )
 
-func StartREPL(cfg *config.Config) {
+// REPL commands
+const (
+	CmdExit = "exit"
+	CmdQuit = "quit"
+)
+
+// StartREPL starts the interactive Read-Eval-Print Loop
+func StartREPL(cfg *config.Config) error {
+	// Initialize readline with tab completion
 	completer := readline.NewPrefixCompleter(
-		readline.PcItem("train"),
-		readline.PcItem("download"),
-		readline.PcItem("predict"),
-		readline.PcItem("exit"),
-		readline.PcItem("quit"),
+		readline.PcItem(constants.CmdTrain),
+		readline.PcItem(constants.CmdDownload),
+		readline.PcItem(constants.CmdPredict),
+		readline.PcItem(CmdExit),
+		readline.PcItem(CmdQuit),
 	)
 
+	// Configure readline
 	rl, err := readline.NewEx(&readline.Config{
 		Prompt:            "> ",
-		HistoryFile:       cfg.Workspace + "/.history",
+		HistoryFile:       cfg.Workspace + "/.aether_history",
 		InterruptPrompt:   "^C",
-		EOFPrompt:         "exit",
+		EOFPrompt:         CmdExit,
 		HistorySearchFold: true,
 		AutoComplete:      completer,
 	})
 	if err != nil {
-		panic(err)
+		return fmt.Errorf("%w: failed to initialize readline: %v", constants.ErrConfigLoad, err)
 	}
 	defer rl.Close()
 
-	fmt.Println("Aether interactive console (type 'exit' to quit)")
+	fmt.Println("Aether interactive console (type 'exit' or 'quit' to exit)")
 
+	// Main REPL loop
 	for {
 		line, err := rl.Readline()
-		if errors.Is(err, readline.ErrInterrupt) {
-			break
-		}
 		if err != nil {
-			break
+			if err == readline.ErrInterrupt {
+				fmt.Println("\nUse 'exit' or 'quit' to exit")
+				continue
+			}
+			if err.Error() == "EOF" {
+				break
+			}
+			return fmt.Errorf("%w: readline error: %v", constants.ErrConfigLoad, err)
 		}
 
 		line = strings.TrimSpace(line)
 		if line == "" {
 			continue
 		}
-		if line == "exit" || line == "quit" {
-			break
+
+		switch line {
+		case CmdExit, CmdQuit:
+			return nil
 		}
 
 		args := strings.Fields(line)
+		if len(args) == 0 {
+			continue
+		}
+
 		if err := DispatchCommand(cfg, args); err != nil {
-			fmt.Println("Error:", err)
+			fmt.Printf("Error: %v\n", err)
 		}
 	}
+
+	return nil
 }
